@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel</title>
+  <!-- Ortak CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>Panel - Hoşgeldin {{ session['username'] }}</h2>
+    <div class="content">
+      <!-- Harita bölgesi -->
+      <div class="map-container">
+        <div id="map" style="height: 400px;"></div>
+      </div>
+      <!-- Side panel: Alan bilgileri giriş formu -->
+      <div class="side-panel">
+        {% if is_admin %}
+          <h3>Alan Bilgisi Girişi</h3>
+          <label for="area_name">İsim:</label>
+          <input type="text" id="area_name" placeholder="Alan ismi" required>
+
+          <label for="water_pollution">Su Kirliliği:</label>
+          <input type="text" id="water_pollution" placeholder="Su kirliliği seviyesi">
+
+          <label for="radioactivity">Radyoaktivite:</label>
+          <input type="text" id="radioactivity" placeholder="Radyoaktivite seviyesi">
+
+          <label for="soil_quality">Toprak Kalitesi:</label>
+          <input type="text" id="soil_quality" placeholder="Toprak kalitesi">
+
+          <label for="living_quality">Canlı Yaşam Kalitesi:</label>
+          <input type="text" id="living_quality" placeholder="Canlı yaşam kalitesi">
+
+          <label for="ph">pH Değeri:</label>
+          <input type="text" id="ph" placeholder="pH değeri">
+
+          <!-- Renk seçici buton -->
+          <label for="color">Renk:</label>
+          <input type="color" id="color" value="#3388ff">
+
+          <button id="save_area">Alanı Kaydet</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="registered-areas">
+      <h3>Kayıtlı Alanlar</h3>
+      <ul>
+        {% for area in areas %}
+          <li>
+            <strong>İsim:</strong> {{ area.area_name }} | 
+            <strong>Koordinatlar:</strong> {{ area.area_coordinates }} | 
+            <strong>Su Kirliliği:</strong> {{ area.water_pollution }} | 
+            <strong>Radyoaktivite:</strong> {{ area.radioactivity }} | 
+            <strong>Toprak Kalitesi:</strong> {{ area.soil_quality }} | 
+            <strong>Canlı Yaşam Kalitesi:</strong> {{ area.living_quality }} | 
+            <strong>pH:</strong> {{ area.ph }} |
+            <span style="background-color: {{ area.color or '#3388ff' }}; padding: 0 10px;">&nbsp;</span>
+
+
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="footer-links">
+      <a href="{{ url_for('database') }}">Veritabanına Git</a> |
+      <a href="{{ url_for('logout') }}">Çıkış Yap</a>
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='js/panel.js') }}"></script>
+</body>
+</html>

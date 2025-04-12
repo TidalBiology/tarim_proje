@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veritabanı</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <h2>Veritabanı</h2>
+  <form method="POST">
+    <input type="text" name="search_query" placeholder="Alan ismi ara..." value="{{ search_query }}">
+    <input type="submit" value="Ara">
+  </form>
+  <table border="1">
+    <tr>
+      <th>İsim</th>
+      <th>Koordinatlar</th>
+      <th>Su Kirliliği</th>
+      <th>Radyoaktivite</th>
+      <th>Toprak Kalitesi</th>
+      <th>Canlı Yaşam Kalitesi</th>
+      <th>pH</th>
+    </tr>
+    {% for area in areas %}
+      <tr>
+        <td>{{ area.area_name }}</td>
+        <td>{{ area.area_coordinates }}</td>
+        <td>{{ area.water_pollution }}</td>
+        <td>{{ area.radioactivity }}</td>
+        <td>{{ area.soil_quality }}</td>
+        <td>{{ area.living_quality }}</td>
+        <td>{{ area.ph }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <div class="footer-links">
+    <a href="{{ url_for('panel') }}">Panel'e Dön</a> |
+    <a href="{{ url_for('logout') }}">Çıkış Yap</a>
+  </div>
+</body>
+</html>
