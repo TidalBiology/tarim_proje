@@ -10,48 +10,41 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)  # Migrasyon desteği eklendi
+migrate = Migrate(app, db)
 
-# Kullanıcı Modeli
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), nullable=False, unique=True)
     password = db.Column(db.String(150), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
-# Alan Bilgisi Modeli (Yeni sütun: color eklenmiştir)
 class AreaData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    area_coordinates = db.Column(db.Text, nullable=False)  # JSON olarak koordinatlar
-    area_name = db.Column(db.String(150), nullable=False)    # Alanın ismi
-    water_pollution = db.Column(db.String(100), nullable=True)  # Su kirliliği
-    radioactivity = db.Column(db.String(100), nullable=True)    # Radyoaktivite
-    soil_quality = db.Column(db.String(100), nullable=True)     # Toprak kalitesi
-    living_quality = db.Column(db.String(100), nullable=True)   # Canlı yaşam kalitesi
-    ph = db.Column(db.String(50), nullable=True)                # pH değeri
-    color = db.Column(db.String(20), nullable=True)             # Alan rengi
+    area_coordinates = db.Column(db.Text, nullable=False)
+    area_name = db.Column(db.String(150), nullable=False)
+    water_pollution = db.Column(db.String(100), nullable=True)
+    radioactivity = db.Column(db.String(100), nullable=True)
+    soil_quality = db.Column(db.String(100), nullable=True)
+    living_quality = db.Column(db.String(100), nullable=True)
+    ph = db.Column(db.String(50), nullable=True)
+    color = db.Column(db.String(20), nullable=True)
+
+# Sabit admin kullanıcısı
+def create_admin():
+    if not User.query.filter_by(username="admin").first():
+        admin = User(
+            username="admin",
+            password=generate_password_hash("admin123"),
+            is_admin=True
+        )
+        db.session.add(admin)
+        db.session.commit()
 
 @app.route('/')
 def home():
     if 'username' in session:
         return redirect(url_for('panel'))
     return render_template('home.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = generate_password_hash(request.form['password'])
-        is_admin = 'is_admin' in request.form  # İsteğe bağlı admin yetkisi
-
-        if User.query.filter_by(username=username).first():
-            return 'Kullanıcı adı zaten mevcut.'
-        
-        new_user = User(username=username, password=password, is_admin=is_admin)
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('login'))
-    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -64,51 +57,52 @@ def login():
             session['username'] = username
             session['is_admin'] = user.is_admin
             return redirect(url_for('panel'))
-        return 'Geçersiz kullanıcı adı veya şifre.'
+        return 'Geçersiz kullanıcı adı veya şifre!'
     return render_template('login.html')
 
-@app.route('/panel', methods=['GET', 'POST'])
+@app.route('/panel')
 def panel():
     if 'username' not in session:
         return redirect(url_for('login'))
+    
     areas = AreaData.query.all()
-    return render_template('panel.html', areas=areas, is_admin=session.get('is_admin'))
+    return render_template('panel.html', 
+                         areas=areas,
+                         is_admin=session.get('is_admin'))
 
 @app.route('/save_area', methods=['POST'])
 def save_area():
     if 'username' in session and session.get('is_admin'):
         data = request.get_json()
-        area_coordinates = json.dumps(data['coordinates'])
-        area_name = data['area_name']
-        water_pollution = data.get('water_pollution', '')
-        radioactivity = data.get('radioactivity', '')
-        soil_quality = data.get('soil_quality', '')
-        living_quality = data.get('living_quality', '')
-        ph = data.get('ph', '')
-        color = data.get('color', '#3388ff')  # Varsayılan olarak Leaflet'in varsayılan rengi veya tercih ettiğiniz renk
+        
+        # Değer kontrolü
+        def validate_value(value, min_val, max_val):
+            try:
+                num = float(value)
+                return min(max(num, min_val), max_val)
+            except:
+                return min_val
 
         new_area = AreaData(
-            area_coordinates=area_coordinates,
-            area_name=area_name,
-            water_pollution=water_pollution,
-            radioactivity=radioactivity,
-            soil_quality=soil_quality,
-            living_quality=living_quality,
-            ph=ph,
-            color=color
+            area_coordinates=json.dumps(data['coordinates']),
+            area_name=data['area_name'],
+            water_pollution=str(validate_value(data.get('water_pollution', 0), 0, 10)),
+            radioactivity=str(validate_value(data.get('radioactivity', 0), 0, 10)),
+            soil_quality=str(validate_value(data.get('soil_quality', 0), 0, 10)),
+            living_quality=str(validate_value(data.get('living_quality', 0), 0, 10)),
+            ph=str(validate_value(data.get('ph', 7), 0, 14)),
+            color=data.get('color', '#3388ff')
         )
+        
         db.session.add(new_area)
         db.session.commit()
+        return jsonify({'message': 'Alan başarıyla kaydedildi!'}), 200
+    return jsonify({'message': 'Yetkisiz erişim!'}), 403
 
-        return jsonify({'message': 'Alan başarıyla kaydedildi.'}), 200
-
-    return jsonify({'message': 'Yetkisiz erişim.'}), 403
-
-@app.route('/database', methods=['GET', 'POST'])
+@app.route('/database')
 def database():
-    query = request.form.get('search_query', '')
-    areas = AreaData.query.filter(AreaData.area_name.contains(query)).all() if query else AreaData.query.all()
-    return render_template('database.html', areas=areas, search_query=query)
+    areas = AreaData.query.all()
+    return render_template('database.html', areas=areas)
 
 @app.route('/logout')
 def logout():
@@ -118,5 +112,6 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Geliştirme aşamasında; canlı sistemde migrasyon kullanın.
+        db.create_all()
+        create_admin()
     app.run(debug=True)
